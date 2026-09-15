@@ -661,6 +661,9 @@ function renderDistrict(){
 }
 
 // ── 図面番号別チェックリスト ──
+const DIRS=['上流①','上流②','上流③','上流④','上流⑤','上流⑥','上流⑦','上流⑧',
+            '下流①','下流②','下流③','下流④','下流⑤','下流⑥','下流⑦','下流⑧'];
+
 function renderZu(){
   var fd=document.getElementById('zu-f-district').value;
   var fs=document.getElementById('zu-f-status').value;
@@ -668,7 +671,7 @@ function renderZu(){
   var zuGroups={};
   for(var i=0;i<DATA.length;i++){
     var r=DATA[i];
-    if(fd&&r[2]!==fd) continue; // 図面番号で絞込
+    if(fd&&r[2]!==fd) continue;
     if(fq&&r[2].toLowerCase().indexOf(fq)<0&&r[0].toLowerCase().indexOf(fq)<0) continue;
     var d=!!progress[r[0]];
     if(fs==='done'&&!d) continue;
@@ -708,30 +711,74 @@ function renderZu(){
       var done=!!progress[r[0]];
       var bg=done?'#f0fdf4':'#fff';
       var kc=r[4]==='幹線'?'#2563a0':'#6a80a0';
-      var cd=CAM_DATA[r[0]];
-      var badge='<span style="font-size:11px;color:#c8d3de">—</span>';
+      var sv=loadSurvey();
+      var dirData=sv[r[0]]||{};
+
+      // 方向別の状態サマリ（バッジ）
+      var dirBadges='';
+      DIRS.forEach(function(dir){
+        var v=dirData[dir];
+        if(!v) return;
+        var isUp=dir.indexOf('上流')>=0;
+        var txt='';
+        if(v.c&&v.s) txt='<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#f3e8ff;color:#6d28d9;border:1px solid #d8b4fe;margin:1px">'+dir+' 📷🪣</span>';
+        else if(v.c) txt='<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#fef3c7;color:#b45309;border:1px solid #fbbf24;margin:1px">'+dir+' 📷</span>';
+        else if(v.s) txt='<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;margin:1px">'+dir+' 🪣</span>';
+        if(txt) dirBadges+=txt;
+      });
+
+      // 左ボーダー色
       var lb='3px solid transparent';
-      if(cd){
-        if(cd.c&&cd.s){badge='<span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:#f3e8ff;color:#6d28d9;border:1px solid #c4b5fd">📷カメラ＋🪣清掃</span>';lb='3px solid #7c3aed';}
-        else if(cd.c){badge='<span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fbbf24">📷カメラ調査</span>';lb='3px solid #f59e0b';}
-        else if(cd.s){badge='<span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd">🪣清掃</span>';lb='3px solid #3b82f6';}
-      }
-      var camChk=cd&&cd.c?' checked':'';
-      var souChk=cd&&cd.s?' checked':'';
+      var cd=CAM_DATA[r[0]];
+      if(cd){ if(cd.c&&cd.s) lb='3px solid #7c3aed'; else if(cd.c) lb='3px solid #f59e0b'; else if(cd.s) lb='3px solid #3b82f6'; }
+
       rows+='<tr style="background:'+bg+';border-left:'+lb+'" id="row-'+r[0]+'">';
       rows+='<td style="width:36px;text-align:center;padding:6px 4px"><input type="checkbox" data-k="'+r[0]+'"'+(done?' checked':'')+' onchange="onZuChk(this)"></td>';
-      rows+='<td style="font-family:monospace;font-size:12px;font-weight:600;padding:6px 8px">'+r[0]+'</td>';
-      rows+='<td style="padding:5px 8px;white-space:nowrap">';
-      rows+='<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer;margin-right:8px;font-size:12px">';
-      rows+='<input type="checkbox" data-k="'+r[0]+'" data-t="c"'+camChk+' onchange="onSurveyZuChk(this)" style="width:14px;height:14px;accent-color:#f59e0b;cursor:pointer"> 📷</label>';
-      rows+='<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer;font-size:12px">';
-      rows+='<input type="checkbox" data-k="'+r[0]+'" data-t="s"'+souChk+' onchange="onSurveyZuChk(this)" style="width:14px;height:14px;accent-color:#3b82f6;cursor:pointer"> 🪣</label>';
+      rows+='<td style="font-family:monospace;font-size:12px;font-weight:600;padding:6px 8px;white-space:nowrap">'+r[0]+'</td>';
+      // 方向別調査状況
+      rows+='<td style="padding:4px 8px">';
+      if(dirBadges){
+        rows+=dirBadges;
+      } else {
+        rows+='<span style="font-size:11px;color:#c8d3de">—</span>';
+      }
+      rows+='<button data-k="'+r[0]+'" onclick="toggleDirPanel(this)"'
+        +' style="margin-left:6px;font-size:10px;padding:1px 7px;border-radius:4px;'
+        +'background:#f0f4f8;border:1px solid #b0bed0;color:#2563a0;cursor:pointer;white-space:nowrap">'
+        +'✏️ 編集</button>';
       rows+='</td>';
       rows+='<td style="font-family:monospace;font-size:11px;color:#8a9ab0;padding:6px 8px">'+r[1]+'</td>';
       rows+='<td style="font-size:11px;color:'+kc+';padding:6px 8px">'+r[4]+'</td>';
       rows+='<td style="font-size:10px;color:#7a8faa;padding:6px 8px" id="date-'+r[0]+'">'+(done?toJST(progress[r[0]]):'')+'</td>';
       rows+='</tr>';
+
+      // 方向選択パネル（折りたたみ）
+      rows+='<tr id="dirpanel-'+r[0]+'" style="display:none;background:#f8faff">';
+      rows+='<td colspan="6" style="padding:8px 12px 10px 52px">';
+      rows+='<div style="font-size:12px;font-weight:600;color:#1a3a5c;margin-bottom:6px">方向別 調査記録</div>';
+      rows+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+      DIRS.forEach(function(dir){
+        var v=dirData[dir]||{c:false,s:false};
+        var isUp=dir.indexOf('上流')>=0;
+        var dirBg=isUp?'#eff6ff':'#ecfdf5';
+        var dirBorder=isUp?'#bfdbfe':'#a7f3d0';
+        var dirColor=isUp?'#1d4ed8':'#059669';
+        rows+='<div style="background:'+dirBg+';border:1px solid '+dirBorder
+          +';border-radius:6px;padding:5px 10px;display:flex;align-items:center;gap:8px">';
+        rows+='<span style="font-size:12px;font-weight:600;color:'+dirColor+';min-width:36px">'+dir+'</span>';
+        rows+='<label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:12px">'
+          +'<input type="checkbox" data-k="'+r[0]+'" data-d="'+dir+'" data-t="c"'
+          +(v.c?' checked':'')+' onchange="onDirChk(this)"'
+          +' style="width:14px;height:14px;accent-color:#f59e0b;cursor:pointer"> 📷</label>';
+        rows+='<label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:12px">'
+          +'<input type="checkbox" data-k="'+r[0]+'" data-d="'+dir+'" data-t="s"'
+          +(v.s?' checked':'')+' onchange="onDirChk(this)"'
+          +' style="width:14px;height:14px;accent-color:#3b82f6;cursor:pointer"> 🪣</label>';
+        rows+='</div>';
+      });
+      rows+='</div></td></tr>';
     }
+
     out+='<div class="zu-section">';
     out+='<div class="zu-header" data-zu="'+zu+'" onclick="toggleZuBody(this)">';
     out+='<span class="zu-title">📐 '+zu+'</span>';
@@ -741,12 +788,12 @@ function renderZu(){
     out+='</span><span style="margin-left:8px;font-size:11px">▼</span></div>';
     out+='<div style="padding:3px 10px 0;background:#fff;border:1px solid #dde4ed;border-top:none">';
     out+='<div class="mini-bar-bg" style="margin:4px 0"><div class="mini-bar-fill" id="zu-fill-'+zu+'" style="width:'+pct+'%;background:'+bc+'"></div></div></div>';
-    out+='<div class="zu-body" id="zubody-'+zu+'" style="background:#fff;border:1px solid #dde4ed;border-top:none;border-radius:0 0 8px 8px;overflow:auto;max-height:460px">';
+    out+='<div class="zu-body" id="zubody-'+zu+'" style="background:#fff;border:1px solid #dde4ed;border-top:none;border-radius:0 0 8px 8px;overflow:auto;max-height:560px">';
     out+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
     out+='<thead><tr style="background:#f0f4f8;color:#4a6080">';
-    out+='<th style="width:36px;text-align:center">✓</th>';
+    out+='<th style="width:36px;text-align:center;padding:5px 4px">✓</th>';
     out+='<th style="padding:5px 8px">管理番号</th>';
-    out+='<th style="padding:5px 8px">📷カメラ　🪣清掃</th>';
+    out+='<th style="padding:5px 8px">調査記録（方向別）</th>';
     out+='<th style="padding:5px 8px">ID</th>';
     out+='<th style="padding:5px 8px">幹枝</th>';
     out+='<th style="padding:5px 8px">完了日時</th>';
@@ -759,59 +806,73 @@ function renderZu(){
   if(!out) out='<div style="padding:24px;text-align:center;color:#9aabbc">該当する図面番号がありません</div>';
   document.getElementById('zu-content').innerHTML=out;
 }
-function onZuChk(cb){toggleCheck(cb.getAttribute('data-k'),cb);}
-function onSurveyZuChk(cb){
+
+function toggleDirPanel(btn){
+  var k=btn.getAttribute('data-k');
+  var panel=document.getElementById('dirpanel-'+k);
+  if(panel) panel.style.display=panel.style.display==='none'?'':'none';
+}
+
+function onDirChk(cb){
   var k=cb.getAttribute('data-k');
-  var t=cb.getAttribute('data-t'); // 'c' or 's'
+  var d=cb.getAttribute('data-d');
+  var t=cb.getAttribute('data-t');
   var sv=loadSurvey();
-
-  // 既存の方向データがある場合のみ更新（新規追加はしない）
-  if(sv[k] && typeof sv[k]==='object' && Object.keys(sv[k]).length>0){
-    // 全方向の該当フラグを一括更新
-    Object.keys(sv[k]).forEach(function(d){
-      if(sv[k][d] && typeof sv[k][d]==='object'){
-        sv[k][d][t]=cb.checked;
-      }
-    });
-    // 全方向でc=false, s=falseなら削除
-    var anyTrue=false;
-    Object.values(sv[k]).forEach(function(v){if(v.c||v.s)anyTrue=true;});
-    if(!anyTrue) delete sv[k];
-  } else {
-    // 方向データがない場合はチェックボックスを元に戻すだけ
-    // （方向不明のデータは追加しない）
-    cb.checked=!cb.checked;
-    return;
-  }
-
+  if(!sv[k]) sv[k]={};
+  if(!sv[k][d]) sv[k][d]={c:false,s:false};
+  sv[k][d][t]=cb.checked;
+  // 両方falseなら方向を削除
+  if(!sv[k][d].c&&!sv[k][d].s) delete sv[k][d];
+  if(Object.keys(sv[k]).length===0) delete sv[k];
   saveSurvey(sv);
-
   // CAM_DATA再計算
   var c=false,s=false;
   if(sv[k]) Object.values(sv[k]).forEach(function(v){if(v.c)c=true;if(v.s)s=true;});
   if(sv[k]&&(c||s)) CAM_DATA[k]={c:c,s:s}; else delete CAM_DATA[k];
-
-  // 行の左ボーダーを更新
-  var row=document.getElementById('row-'+k);
-  if(row){
-    var cd=CAM_DATA[k];
-    var lb='3px solid transparent';
-    if(cd){
-      if(cd.c&&cd.s) lb='3px solid #7c3aed';
-      else if(cd.c)  lb='3px solid #f59e0b';
-      else if(cd.s)  lb='3px solid #3b82f6';
-    }
-    row.style.borderLeft=lb;
-  }
-  // 図面番号ヘッダーのバッジ更新
+  // 行のバッジ・ボーダーを更新
   var zu=DATA[KANRI_IDX[k]]?DATA[KANRI_IDX[k]][2]:null;
-  if(zu) updateZuHeader(zu);
+  if(zu){
+    updateZuHeader(zu);
+    // バッジを即時更新
+    var dirData=sv[k]||{};
+    var newBadges='';
+    DIRS.forEach(function(dir){
+      var v=dirData[dir];
+      if(!v) return;
+      var txt='';
+      if(v.c&&v.s) txt='<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#f3e8ff;color:#6d28d9;border:1px solid #d8b4fe;margin:1px">'+dir+' 📷🪣</span>';
+      else if(v.c) txt='<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#fef3c7;color:#b45309;border:1px solid #fbbf24;margin:1px">'+dir+' 📷</span>';
+      else if(v.s) txt='<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;margin:1px">'+dir+' 🪣</span>';
+      if(txt) newBadges+=txt;
+    });
+    // 編集ボタンを含むtdを更新
+    var row=document.getElementById('row-'+k);
+    if(row){
+      var td=row.cells[2];
+      if(td){
+        td.innerHTML=(newBadges||'<span style="font-size:11px;color:#c8d3de">—</span>')
+          +'<button data-k="'+k+'" onclick="toggleDirPanel(this)"'
+          +' style="margin-left:6px;font-size:10px;padding:1px 7px;border-radius:4px;'
+          +'background:#f0f4f8;border:1px solid #b0bed0;color:#2563a0;cursor:pointer;white-space:nowrap">'
+          +'✏️ 編集</button>';
+      }
+      // ボーダー更新
+      var cd=CAM_DATA[k];
+      var lb='3px solid transparent';
+      if(cd){ if(cd.c&&cd.s) lb='3px solid #7c3aed'; else if(cd.c) lb='3px solid #f59e0b'; else if(cd.s) lb='3px solid #3b82f6'; }
+      row.style.borderLeft=lb;
+    }
+  }
 }
+
+function onZuChk(cb){toggleCheck(cb.getAttribute('data-k'),cb);}
+
 function toggleZuBody(hdr){
   var zu=hdr.getAttribute('data-zu');
   var el=document.getElementById('zubody-'+zu);
   if(el) el.style.display=(el.style.display==='none')?'':'none';
 }
+
 function bulkZu(btn){
   var zu=btn.getAttribute('data-zu');
   var chk=btn.getAttribute('data-chk')==='1';
@@ -829,10 +890,12 @@ function bulkZu(btn){
   }
   saveProg(progress);updateProgress();updateZuHeader(zu);
 }
+
 function toggleAllZu(){
   zuAllOpen=!zuAllOpen;
   document.querySelectorAll('.zu-body').forEach(function(el){el.style.display=zuAllOpen?'':'none';});
 }
+
 // ── 月別 ──
 function renderMonthly(){
   const mp={};
