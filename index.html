@@ -705,6 +705,8 @@ function renderZu(){
     if(hSou>0) hbadge+='<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:#dbeafe;border:1px solid #93c5fd;color:#1d4ed8;margin-right:3px">🪣'+hSou+'件</span>';
     if(hBoth>0) hbadge+='<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:#f3e8ff;border:1px solid #d8b4fe;color:#6d28d9">両方'+hBoth+'件</span>';
 
+    // 管理番号の昇順ソート
+    grp.rows.sort(function(a,b){ return a[0].localeCompare(b[0],undefined,{numeric:true}); });
     var rows='';
     for(var ri=0;ri<grp.rows.length;ri++){
       var r=grp.rows[ri];
